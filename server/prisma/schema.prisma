@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  password       String?        // Nullable for Google Auth users
+  name           String?
+  discordNick    String?
+  role           String         @default("USER")
+  googleId       String?        @unique
+  twoFactorSecret String?
+  isTwoFactorEnabled Boolean    @default(false)
+  
+  videos         Video[]        // Admin only usually
+  views          VideoView[]
+  likes          Like[]
+  subscriptions  Subscription[] // Who this user subscribes to
+  subscribers    Subscription[] @relation("UserSubscribers") // Who subscribes to this user (for Korcze)
+  comments       Comment[]
+  contestEntries ContestEntry[]
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Video {
+  id                  String   @id @default(uuid())
+  title               String
+  description         String?
+  videoUrl            String   // Path to file or URL
+  thumbnailUrl        String?
+  tags                String   @default("") // Comma separated string for SQLite
+  slug                String   @unique
+  isPublic            Boolean  @default(true)
+  
+  // Contest Logic
+  isContestMode       Boolean  @default(false)
+  contestPasswordHash String?
+  
+  views               Int      @default(0)
+  
+  uploaderId          String
+  uploader            User     @relation(fields: [uploaderId], references: [id])
+  
+  likes               Like[]
+  contestEntries      ContestEntry[]
+  comments            Comment[]
+  viewsList           VideoView[]
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model VideoView {
+  id        String   @id @default(uuid())
+  videoId   String
+  userId    String?  // Null if anonymous
+  ip        String?  // Store IP hash ideally
+  createdAt DateTime @default(now())
+
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@unique([videoId, userId]) // Enforce unique view per user per video
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String
+  videoId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  type      String   // LIKE or DISLIKE
+  userId    String
+  videoId   String
+  user      User     @relation(fields: [userId], references: [id])
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+}
+
+model Subscription {
+  id           String @id @default(uuid())
+  subscriberId String
+  channelId    String
+  
+  subscriber   User   @relation(fields: [subscriberId], references: [id])
+  channel      User   @relation("UserSubscribers", fields: [channelId], references: [id])
+
+  createdAt    DateTime @default(now())
+  
+  @@unique([subscriberId, channelId])
+}
+
+model ContestEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  videoId   String
+  enteredAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+}
