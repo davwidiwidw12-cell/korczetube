@@ -26,8 +26,6 @@ npm run start
 Serwer uruchomi się na porcie **4000**.
 Admin "Korcze" zostanie utworzony automatycznie przy starcie.
 Dane logowania admina:
-- Email: `korcze@korczetube.com`
-- Hasło: `korcze_admin_password`
 
 ### Krok 3: Frontend (Client)
 Otwórz nowy terminal w folderze `client`:
